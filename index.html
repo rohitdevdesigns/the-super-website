@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="The Super Website — big ideas, made simple." />
     <title>The Super Website</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=13" />
+    <script src="scan.js?v=13" defer></script>
+    <script src="holo.js?v=2" defer></script>
   </head>
   <body>
     <main>
@@ -19,6 +21,7 @@
       </nav>
 
       <section class="hero" id="top">
+        <canvas class="scan" data-specimens="medusa,squid,ctenophore,angler" aria-hidden="true"></canvas>
         <p class="eyebrow">A little corner of the internet</p>
         <h1>Make something<br /><em>super.</em></h1>
         <div class="hero-bottom">
@@ -33,17 +36,17 @@
       </section>
 
       <section class="cards" aria-label="Highlights">
-        <article class="card coral">
+        <article class="card coral" data-holo="star">
           <p>01</p>
           <h3>Start with<br />curiosity.</h3>
           <span>✦</span>
         </article>
-        <article class="card blue">
+        <article class="card blue" data-holo="orbit">
           <p>02</p>
           <h3>Build with<br />care.</h3>
           <span>●</span>
         </article>
-        <article class="card yellow">
+        <article class="card yellow" data-holo="arrow">
           <p>03</p>
           <h3>Share the<br />good stuff.</h3>
           <span>↗</span>

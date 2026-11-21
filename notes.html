@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Tiny observations from The Super Website." />
     <title>Field Notes — The Super Website</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=13" />
+    <script src="scan.js?v=13" defer></script>
+    <script src="holo.js?v=2" defer></script>
   </head>
   <body>
     <main>
@@ -18,20 +20,21 @@
       </nav>
 
       <section class="notes-hero">
+        <canvas class="scan" data-specimens="ctenophore,medusa,angler,squid" aria-hidden="true"></canvas>
         <p class="eyebrow">Field notes / volume 01</p>
         <h1>Little things<br />worth <em>noticing.</em></h1>
         <p>Collected thoughts, bright fragments, and reminders to make room for wonder.</p>
       </section>
 
       <section class="note-grid" aria-label="Field notes">
-        <article class="note featured-note">
+        <article class="note featured-note" data-holo="star" data-holo-center="0.62,0.36">
           <div class="note-meta"><span>Aug 28, 2026</span><span>02 min</span></div>
           <p class="note-number">01</p>
           <h2>The good kind of<br />unfinished.</h2>
           <p class="note-copy">Leave a little air around the edges. It gives the next good idea somewhere to land.</p>
           <span class="note-mark">✦</span>
         </article>
-        <article class="note">
+        <article class="note" data-holo data-holo-center="0.85,0.8">
           <div class="note-meta"><span>Aug 19, 2026</span><span>01 min</span></div>
           <p class="note-number">02</p>
           <h2>A tiny list of<br /><em>favourite things.</em></h2>
@@ -41,7 +44,7 @@
             <li>Ideas written in the margins</li>
           </ul>
         </article>
-        <article class="note accent-note">
+        <article class="note accent-note" data-holo data-holo-center="0.15,0.85">
           <div class="note-meta"><span>Aug 06, 2026</span><span>03 min</span></div>
           <p class="note-number">03</p>
           <h2>Make the<br /><em>ordinary</em> glow.</h2>
