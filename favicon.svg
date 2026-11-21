@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="bell" cx="50%" cy="35%" r="65%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".45" stop-color="#b9c8ff"/>
+      <stop offset="1" stop-color="#6f5cff"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0" stop-color="#6ff3ff" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#6ff3ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#03050b"/>
+  <circle cx="32" cy="26" r="26" fill="url(#glow)"/>
+  <path d="M12 30a20 17 0 0 1 40 0q-2.5 2.6-5 0t-5 0-5 0-5 0-5 0-5 0-5 0-5 0z" fill="url(#bell)"/>
+  <g fill="none" stroke="#c9d6ff" stroke-width="1.6" stroke-linecap="round" opacity=".85">
+    <path d="M20 32c-2 6 2 10 0 16s1 8 0 10"/>
+    <path d="M27 33c1 6-2 9 0 15"/>
+    <path d="M32 33c0 7 2 11 0 20"/>
+    <path d="M37 33c-1 6 2 9 0 15"/>
+    <path d="M44 32c2 6-2 10 0 16s-1 8 0 10"/>
+  </g>
+  <g fill="none" stroke="#6ff3ff" stroke-width="1.4">
+    <path d="M6 14V6h8M50 6h8v8M58 50v8h-8M14 58H6v-8"/>
+  </g>
+</svg>

@@ -3,19 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Tiny observations from The Super Website." />
     <title>Field Notes — The Super Website</title>
-    <link rel="stylesheet" href="styles.css?v=16" />
-    <script src="scan.js?v=14" defer></script>
-    <script src="holo.js?v=5" defer></script>
+    <meta name="description" content="Tiny observations from The Super Website." />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="The Super Website" />
+    <meta property="og:title" content="Field notes — The Super Website" />
+    <meta property="og:description" content="Tiny observations from The Super Website." />
+    <meta property="og:url" content="https://rohitdevdesigns.github.io/the-super-website/notes.html" />
+    <meta property="og:image" content="https://rohitdevdesigns.github.io/the-super-website/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A glowing deep-sea jellyfish under a scanning HUD, beside the words Make something super." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="styles.css?v=19" />
+    <script src="sound.js?v=1" defer></script>
+    <script src="dive.js?v=1" defer></script>
+    <script src="reveal.js?v=1" defer></script>
+    <script src="scan.js?v=17" defer></script>
+    <script src="holo.js?v=6" defer></script>
   </head>
   <body>
+    <div class="boot" id="boot" aria-hidden="true">
+      <div class="boot-inner">
+        <p class="boot-title">Initializing scan</p>
+        <ol class="boot-log"></ol>
+        <div class="boot-bar"><span></span></div>
+      </div>
+    </div>
+    <script src="boot.js?v=1"></script>
     <main>
       <nav class="nav" aria-label="Main navigation">
         <a class="brand" href="index.html">super<span>•</span>site</a>
         <div class="nav-links">
           <a class="nav-link" href="story.html">Our story</a>
+          <a class="nav-link" href="specimens.html">Specimens</a>
           <a class="nav-link" href="index.html#hello">Say hello <span aria-hidden="true">↗</span></a>
+          <button class="snd-toggle" type="button" aria-pressed="false" title="Sound effects">SND <span>OFF</span></button>
         </div>
       </nav>
 

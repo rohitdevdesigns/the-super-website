@@ -3,20 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="The Super Website — big ideas, made simple." />
     <title>The Super Website</title>
-    <link rel="stylesheet" href="styles.css?v=16" />
-    <script src="scan.js?v=14" defer></script>
-    <script src="holo.js?v=5" defer></script>
+    <meta name="description" content="The Super Website — big ideas, made simple." />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="The Super Website" />
+    <meta property="og:title" content="Make something super." />
+    <meta property="og:description" content="The Super Website — big ideas, made simple." />
+    <meta property="og:url" content="https://rohitdevdesigns.github.io/the-super-website/" />
+    <meta property="og:image" content="https://rohitdevdesigns.github.io/the-super-website/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A glowing deep-sea jellyfish under a scanning HUD, beside the words Make something super." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="styles.css?v=19" />
+    <script src="sound.js?v=1" defer></script>
+    <script src="dive.js?v=1" defer></script>
+    <script src="reveal.js?v=1" defer></script>
+    <script src="scan.js?v=17" defer></script>
+    <script src="holo.js?v=6" defer></script>
+    <script src="contact.js?v=1" defer></script>
   </head>
   <body>
+    <div class="boot" id="boot" aria-hidden="true">
+      <div class="boot-inner">
+        <p class="boot-title">Initializing scan</p>
+        <ol class="boot-log"></ol>
+        <div class="boot-bar"><span></span></div>
+      </div>
+    </div>
+    <script src="boot.js?v=1"></script>
     <main>
       <nav class="nav" aria-label="Main navigation">
         <a class="brand" href="#top">super<span>•</span>site</a>
         <div class="nav-links">
           <a class="nav-link" href="story.html">Our story</a>
           <a class="nav-link" href="notes.html">Field notes</a>
+          <a class="nav-link" href="specimens.html">Specimens</a>
           <a class="nav-link" href="#hello">Say hello <span aria-hidden="true">↗</span></a>
+          <button class="snd-toggle" type="button" aria-pressed="false" title="Sound effects">SND <span>OFF</span></button>
         </div>
       </nav>
 
@@ -58,8 +85,28 @@
 
       <section class="hello" id="hello">
         <p class="section-label">02 / Get in touch</p>
-        <h2>Let’s make<br />something <em>great.</em></h2>
-        <a class="email" href="mailto:rohit.dev9155@gmail.com">rohit.dev9155@gmail.com <span>↗</span></a>
+        <div class="hello-body">
+          <h2>Let’s make<br />something <em>great.</em></h2>
+          <form class="contact-form" data-endpoint="" data-mailto="rohit.dev9155@gmail.com" novalidate>
+            <div class="field">
+              <label for="cf-name">Name</label>
+              <input id="cf-name" name="name" autocomplete="name" required />
+            </div>
+            <div class="field">
+              <label for="cf-email">Email</label>
+              <input id="cf-email" name="email" type="email" autocomplete="email" required />
+            </div>
+            <div class="field field-wide">
+              <label for="cf-msg">Message</label>
+              <textarea id="cf-msg" name="message" rows="4" required></textarea>
+            </div>
+            <div class="form-foot">
+              <button type="submit">Transmit <span aria-hidden="true">↗</span></button>
+              <p class="form-status" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+          <a class="email" href="mailto:rohit.dev9155@gmail.com">or email rohit.dev9155@gmail.com <span>↗</span></a>
+        </div>
       </section>
     </main>
     <footer>© 2026 The Super Website</footer>

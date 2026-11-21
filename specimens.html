@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Specimens — The Super Website</title>
+    <meta name="description" content="Four bioluminescent deep-sea specimens, scanned live." />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="The Super Website" />
+    <meta property="og:title" content="The specimen index — The Super Website" />
+    <meta property="og:description" content="Four bioluminescent deep-sea specimens, scanned live." />
+    <meta property="og:url" content="https://rohitdevdesigns.github.io/the-super-website/specimens.html" />
+    <meta property="og:image" content="https://rohitdevdesigns.github.io/the-super-website/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A glowing deep-sea jellyfish under a scanning HUD, beside the words Make something super." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="styles.css?v=19" />
+    <script src="sound.js?v=1" defer></script>
+    <script src="dive.js?v=1" defer></script>
+    <script src="reveal.js?v=1" defer></script>
+    <script src="scan.js?v=17" defer></script>
+  </head>
+  <body>
+    <div class="boot" id="boot" aria-hidden="true">
+      <div class="boot-inner">
+        <p class="boot-title">Initializing scan</p>
+        <ol class="boot-log"></ol>
+        <div class="boot-bar"><span></span></div>
+      </div>
+    </div>
+    <script src="boot.js?v=1"></script>
+    <main>
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="index.html">super<span>•</span>site</a>
+        <div class="nav-links">
+          <a class="nav-link" href="story.html">Our story</a>
+          <a class="nav-link" href="notes.html">Field notes</a>
+          <a class="nav-link" href="index.html#hello">Say hello <span aria-hidden="true">↗</span></a>
+          <button class="snd-toggle" type="button" aria-pressed="false" title="Sound effects">SND <span>OFF</span></button>
+        </div>
+      </nav>
+
+      <section class="specimens-hero">
+        <p class="eyebrow">Specimen index / 04 entries</p>
+        <h1>Four lights<br />in the <em>dark.</em></h1>
+        <p>Every creature on this site is drawn live in code. Move your cursor over a specimen to lock onto its anatomy.</p>
+      </section>
+
+      <section class="specimen-grid" aria-label="Specimens">
+          <article class="specimen" id="medusa">
+            <canvas class="scan mini" data-specimens="medusa" aria-hidden="true"></canvas>
+            <div class="specimen-body">
+              <div class="note-meta"><span>Specimen 01</span><span>Medusozoa</span></div>
+              <h2>Medusa</h2>
+              <p class="specimen-log">A bell of jelly-like mesoglea that rows through the water by contracting. Rings of tentacles carry nematocysts — microscopic stinging capsules that fire on contact.</p>
+              <dl class="specimen-stats">
+                <div><dt>Moves by</dt><dd>Bell pulsing</dd></div>
+                <div><dt>Light source</dt><dd>Bioluminescent proteins</dd></div>
+              </dl>
+            </div>
+          </article>
+          <article class="specimen" id="squid">
+            <canvas class="scan mini" data-specimens="squid" aria-hidden="true"></canvas>
+            <div class="specimen-body">
+              <div class="note-meta"><span>Specimen 02</span><span>Teuthida</span></div>
+              <h2>Squid</h2>
+              <p class="specimen-log">Eight arms and two longer feeding tentacles tipped with sucker clubs. Many deep-sea squid carry light organs on their undersides to blend into the faint light from above.</p>
+              <dl class="specimen-stats">
+                <div><dt>Moves by</dt><dd>Jet propulsion & fins</dd></div>
+                <div><dt>Light source</dt><dd>Photophores</dd></div>
+              </dl>
+            </div>
+          </article>
+          <article class="specimen" id="ctenophore">
+            <canvas class="scan mini" data-specimens="ctenophore" aria-hidden="true"></canvas>
+            <div class="specimen-body">
+              <div class="note-meta"><span>Specimen 03</span><span>Ctenophora</span></div>
+              <h2>Comb jelly</h2>
+              <p class="specimen-log">Not a true jellyfish. It swims with eight rows of fused cilia; as they beat they split light into travelling rainbows. Many species also glow blue-green when disturbed.</p>
+              <dl class="specimen-stats">
+                <div><dt>Moves by</dt><dd>Eight beating comb rows</dd></div>
+                <div><dt>Light source</dt><dd>Diffracted light & bioluminescence</dd></div>
+              </dl>
+            </div>
+          </article>
+          <article class="specimen" id="angler">
+            <canvas class="scan mini" data-specimens="angler" aria-hidden="true"></canvas>
+            <div class="specimen-body">
+              <div class="note-meta"><span>Specimen 04</span><span>Lophiiformes</span></div>
+              <h2>Anglerfish</h2>
+              <p class="specimen-log">A modified dorsal spine forms a rod (illicium) tipped with a lure (esca). The glow comes from bacteria living inside the lure, drawing prey toward a mouth full of needle teeth.</p>
+              <dl class="specimen-stats">
+                <div><dt>Moves by</dt><dd>Slow drift, ambush</dd></div>
+                <div><dt>Light source</dt><dd>Symbiotic bacteria</dd></div>
+              </dl>
+            </div>
+          </article>
+      </section>
+    </main>
+    <footer>© 2026 The Super Website</footer>
+  </body>
+</html>

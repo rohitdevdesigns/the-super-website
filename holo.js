@@ -14,39 +14,35 @@
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const noHover = matchMedia('(hover: none)').matches;
   const TAU = Math.PI * 2;
-  const clamp01 = (x) => Math.max(0, Math.min(1, x));
-  const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const LOW = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
 
-  /* ---------- seeded Perlin noise ---------- */
+  /* ---------- field computation: background worker, main-thread fallback ---------- */
 
-  function rng(seed) {
-    return () => {
-      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
-      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
+  const FIELD_SRC = 'holo-field.js?v=1';
+  let worker = null, jobId = 0, fallback = null;
+  const waiting = new Map();
+  const loadFallback = () => fallback || (fallback = new Promise((res) => {
+    if (self.holoField) return res(self.holoField);
+    const sc = document.createElement('script');
+    sc.src = FIELD_SRC;
+    sc.onload = () => res(self.holoField || null);
+    sc.onerror = () => res(null);
+    document.head.appendChild(sc);
+  }));
+  try {
+    worker = new Worker(FIELD_SRC);
+    worker.onmessage = (e) => { const cb = waiting.get(e.data.id); waiting.delete(e.data.id); if (cb) cb(e.data.px); };
+    worker.onerror = () => { worker = null; for (const cb of waiting.values()) cb(null); waiting.clear(); };
+  } catch { worker = null; }
 
-  function perlin(seed) {
-    const r = rng(seed), base = [...Array(256).keys()];
-    for (let i = 255; i > 0; i--) { const j = (r() * (i + 1)) | 0; [base[i], base[j]] = [base[j], base[i]]; }
-    const p = new Uint8Array(512);
-    for (let i = 0; i < 512; i++) p[i] = base[i & 255];
-    const grad = (h, x, y) => {
-      switch (h & 7) {
-        case 0: return x + y; case 1: return -x + y; case 2: return x - y; case 3: return -x - y;
-        case 4: return x; case 5: return -x; case 6: return y; default: return -y;
-      }
-    };
-    const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
-    const mix = (a, b, t) => a + (b - a) * t;
-    return (x, y) => {
-      let X = Math.floor(x), Y = Math.floor(y);
-      x -= X; y -= Y; X &= 255; Y &= 255;
-      const u = fade(x), v = fade(y), a = p[X] + Y, b = p[X + 1] + Y;
-      return mix(mix(grad(p[a], x, y), grad(p[b], x - 1, y), u), mix(grad(p[a + 1], x, y - 1), grad(p[b + 1], x - 1, y - 1), u), v);
-    };
+  function computeField(job) {
+    const local = () => loadFallback().then((fn) => (fn ? fn(job) : null));
+    if (!worker) return local();
+    return new Promise((res) => {
+      const id = ++jobId;
+      waiting.set(id, (px) => (px ? res(px) : local().then(res)));
+      worker.postMessage({ ...job, id });
+    });
   }
 
   /* ---------- fine-line emblems (guilloche / engraving style) ---------- */
@@ -158,11 +154,11 @@
     },
   };
 
-  /* ---------- damascus field → alpha mask ---------- */
+  /* ---------- damascus mask: field pixels from the worker + emblem on top ---------- */
 
-  function makePattern(el) {
+  async function makePattern(el) {
     const rect = el.getBoundingClientRect();
-    const s = Math.min(2, window.devicePixelRatio || 1);
+    const s = Math.min(LOW ? 1.5 : 2, window.devicePixelRatio || 1);
     const W = Math.round(rect.width * s), H = Math.round(rect.height * s);
     if (!W || !H) return null;
 
@@ -172,62 +168,13 @@
     const motif = emblems[el.dataset.holo];
     const mR = motif ? Math.min(rect.width, rect.height) * 0.27 : 0; // CSS px
     const seed = el._holoSeed ?? (el._holoSeed = (Math.random() * 1e6) | 0);
-    const n = perlin(seed);
-    // two smooth octaves only: higher octaves make the lines jitter like a topo map
-    const fbm = (x, y) => n(x, y) * 0.72 + n(x * 1.93 + 7.1, y * 1.93 + 3.3) * 0.28;
 
-    const GAP = 3.4;   // CSS px between lines
-    const HALF = 0.3;  // half line width, CSS px
-
-    // Sample the field on a coarse grid (every 2 device px) — it is smooth, so bilinear is exact enough.
-    const step = 2, GW = Math.ceil(W / step) + 2, GH = Math.ceil(H / step) + 2;
-    const F = new Float32Array(GW * GH);
-    const sc = 0.0029;
-    for (let j = 0; j < GH; j++) {
-      for (let i = 0; i < GW; i++) {
-        const x = (i * step) / s, y = (j * step) / s;
-        // two-level domain warp gives folded, flowing bands like pattern-welded steel
-        const qx = fbm(x * sc, y * sc), qy = fbm(x * sc + 5.2, y * sc + 1.3);
-        const wx = fbm(x * sc + 2.2 * qx + 1.7, y * sc + 2.2 * qy + 9.2), wy = fbm(x * sc + 2.2 * qx + 8.3, y * sc + 2.2 * qy + 2.8);
-        const d0 = Math.hypot(x - cx, y - cy);
-        const amp = 14 + d0 * 0.2;                // calm near the emblem, more folded outward
-        F[j * GW + i] = Math.hypot(x - cx + wx * amp, y - cy + wy * amp);
-      }
-    }
-
+    const px = await computeField({ W, H, s, cx, cy, mR, seed });
+    if (!px) return null;
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const g = c.getContext('2d');
-    const img = g.createImageData(W, H), d = img.data;
-    const lineAlpha = motif ? 0.72 : 0.85;
-
-    for (let y = 0; y < H; y++) {
-      const gy = y / step, j = Math.floor(gy), ty = gy - j;
-      for (let x = 0; x < W; x++) {
-        const gx = x / step, i = Math.floor(gx), tx = gx - i;
-        const k = j * GW + i;
-        const f00 = F[k], f10 = F[k + 1], f01 = F[k + GW], f11 = F[k + GW + 1];
-        const f = (f00 * (1 - tx) + f10 * tx) * (1 - ty) + (f01 * (1 - tx) + f11 * tx) * ty;
-        // gradient in field units per device pixel → keeps every line the same hairline width
-        const ddx = ((f10 - f00) * (1 - ty) + (f11 - f01) * ty) / step;
-        const ddy = ((f01 - f00) * (1 - tx) + (f11 - f10) * tx) / step;
-        const grad = Math.hypot(ddx, ddy) || 1e-3;
-        const v = f / GAP, fr = v - Math.floor(v);
-        const distPx = (Math.min(fr, 1 - fr) * GAP) / grad;      // device px to nearest line
-        let a = clamp01(HALF * s + 0.5 - distPx);
-        if (a <= 0) continue;
-        if (motif) {
-          const dr = Math.hypot(x / s - cx, y / s - cy);
-          a *= smooth(mR * 1.16, mR * 1.42, dr);                 // soft moat around the emblem
-          if (a <= 0) continue;
-        }
-        const o = (y * W + x) * 4;
-        d[o] = d[o + 1] = d[o + 2] = 255;
-        d[o + 3] = (a * lineAlpha * 255) | 0;
-      }
-    }
-    g.putImageData(img, 0, 0);
-
+    g.putImageData(new ImageData(px, W, H), 0, 0);
     if (motif) {
       g.strokeStyle = g.fillStyle = '#fff';
       g.lineJoin = 'round';
@@ -250,11 +197,13 @@
     let pending = 0, lastW = 0, lastH = 0, blobUrl = null;
     // A short blob: URL instead of a multi-megabyte data: URL — very large data URLs in a
     // custom property can silently fail to apply on tall cards.
-    const paint = () => {
-      const canvas = makePattern(el);
-      if (!canvas) return;
+    let paintToken = 0;
+    const paint = async () => {
+      const token = ++paintToken;
+      const canvas = await makePattern(el);
+      if (!canvas || token !== paintToken) return;
       canvas.toBlob((blob) => {
-        if (!blob) return;
+        if (!blob || token !== paintToken) return;
         const url = URL.createObjectURL(blob);
         el.style.setProperty('--pattern', `url("${url}")`);
         if (blobUrl) setTimeout(URL.revokeObjectURL, 1000, blobUrl);

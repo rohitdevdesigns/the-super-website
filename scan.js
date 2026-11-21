@@ -877,7 +877,7 @@
   /* ---------------- HUD tags ---------------- */
 
   class Tag {
-    constructor(scene, t, idx) {
+    constructor(scene, t, idx, locked = false) {
       this.scene = scene;
       this.idx = idx;
       this.id = (nextId += (rand(2, 40) | 0));
@@ -885,69 +885,95 @@
       this.life = rand(2.2, 3.8);
       this.size = rand(22, 46);
       this.filled = Math.random() < 0.35;
+      this.locked = locked;
+      this.grow = 1;
       const a = scene.anchorsWorld(t)[idx];
       this.side = a.x >= scene.pos.x ? 1 : -1;  // labels fan outward
       this.px = null; this.py = null;
     }
 
-    dead(t) { return t - this.born > this.life; }
+    dead(t) { return !this.locked && t - this.born > this.life; }
 
     draw(ctx, t, w) {
       const a = this.scene.anchorsWorld(t)[this.idx];
       if (!a) return;
+      // a locked tag stays alive, enlarges and turns cyan
+      if (this.locked) this.born = Math.max(this.born, t - this.life + 0.6);
+      this.grow = lerp(this.grow, this.locked ? 1.4 : 1, 0.15);
       this.px = this.px == null ? a.x : lerp(this.px, a.x, 0.25);
       this.py = this.py == null ? a.y : lerp(this.py, a.y, 0.25);
       const age = t - this.born;
-      if (age < 0.18 && Math.random() < 0.5) return; // boot flicker
+      if (age < 0.18 && !this.locked && Math.random() < 0.5) return; // boot flicker
       const fadeOut = Math.min(1, (this.life - age) / 0.3);
       const zoom = 1 + Math.max(0, 1 - age / 0.25) * 1.2;
-      const s = this.size * zoom, x = this.px, y = this.py;
+      const s = this.size * zoom * this.grow, x = this.px, y = this.py;
+      const ink = this.locked ? 'rgba(111,243,255,0.95)' : 'rgba(235,242,255,0.9)';
 
       ctx.save();
       ctx.globalAlpha = Math.max(0, fadeOut);
-      ctx.strokeStyle = 'rgba(235,242,255,0.9)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = this.locked ? 1.4 : 1;
       brackets(ctx, x - s / 2, y - s / 2, s, s, Math.max(5, s * 0.22));
       ctx.strokeRect(x - 4, y - 4, 8, 8);
-      if (Math.sin(t * 9 + this.id) > 0) ctx.strokeRect(x + s * 0.18, y - s * 0.32, 6, 6);
+      if (this.locked) {
+        // rotating inner reticle
+        ctx.beginPath();
+        ctx.arc(x, y, s * 0.28, t * 3, t * 3 + Math.PI * 1.4);
+        ctx.stroke();
+      } else if (Math.sin(t * 9 + this.id) > 0) ctx.strokeRect(x + s * 0.18, y - s * 0.32, 6, 6);
 
       let lx = x + this.side * (s / 2 + 10);
       const ly = y - s / 2 - 4;
-      const label = `${a.label}-${this.id}`;
-      ctx.font = `18px ${HUD_FONT}`;
+      const label = `${this.locked ? '◉ ' : ''}${a.label}-${this.id}`;
+      ctx.font = `${this.locked ? 20 : 18}px ${HUD_FONT}`;
       const tw = ctx.measureText(label).width;
       if (this.side < 0) lx -= tw;
       lx = Math.max(6, Math.min(w - 6 - tw, lx));
       const shown = label.slice(0, Math.ceil(label.length * Math.min(1, age / 0.4)));
 
-      if (this.filled) {
-        ctx.fillStyle = 'rgba(190,200,220,0.28)';
+      if (this.filled || this.locked) {
+        ctx.fillStyle = this.locked ? 'rgba(111,243,255,0.16)' : 'rgba(190,200,220,0.28)';
         ctx.fillRect(lx - 3, ly - 15, tw + 6, 34);
       }
-      ctx.fillStyle = 'rgba(245,248,255,0.95)';
+      ctx.fillStyle = this.locked ? 'rgba(200,255,255,1)' : 'rgba(245,248,255,0.95)';
       ctx.fillText(shown, lx, ly);
       ctx.font = `14px ${HUD_FONT}`;
-      ctx.fillStyle = 'rgba(180,195,225,0.7)';
-      ctx.fillText(`X0 ${pad(x)}  Y0 ${pad(y)}`, lx, ly + 13);
+      ctx.fillStyle = this.locked ? 'rgba(111,243,255,0.85)' : 'rgba(180,195,225,0.7)';
+      ctx.fillText(this.locked ? `LOCKED  X0 ${pad(x)}  Y0 ${pad(y)}` : `X0 ${pad(x)}  Y0 ${pad(y)}`, lx, ly + 13);
 
       ctx.beginPath();
       ctx.moveTo(x + (this.side * s) / 2, y - s / 2);
       ctx.lineTo(this.side > 0 ? lx - 3 : lx + tw + 3, ly + 2);
-      ctx.strokeStyle = 'rgba(200,215,255,0.35)';
+      ctx.strokeStyle = this.locked ? 'rgba(111,243,255,0.5)' : 'rgba(200,215,255,0.35)';
+      ctx.lineWidth = 1;
       ctx.stroke();
       ctx.restore();
     }
   }
 
+  /* ---------------- shared pointer + device profile ---------------- */
+
+  const pointer = { x: -1e4, y: -1e4, active: false };
+  addEventListener('pointermove', (e) => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = e.pointerType !== 'touch'; }, { passive: true });
+  document.addEventListener('pointerleave', () => { pointer.active = false; });
+
+  // Lighter rendering on small or low-power devices
+  const LOW = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4 || matchMedia('(max-width: 700px)').matches;
+
   /* ---------------- scene ---------------- */
 
   function Scene(canvas) {
     const ctx = canvas.getContext('2d');
+    const mini = canvas.classList.contains('mini');
     const order = (canvas.dataset.specimens || 'medusa,squid,ctenophore,angler')
       .split(',').map((s) => SPECIES[s.trim()]).filter(Boolean);
+    const cycles = order.length > 1;
+    const showTags = canvas.dataset.tags !== 'off';
+    const particleCount = LOW ? 700 : PARTICLES;
     let w = 0, h = 0, dpr = 1, R = 100, cx = 0, cy = 0;
     let idx = 0, cur = null, next = null, state = 'hold', phaseStart = 0, morphStart = 0, particles = null;
-    let tags = [], snow = [], running = false, visible = true, last = 0, frame = 0;
+    let tags = [], snow = [], running = false, visible = true, last = 0, frame = 0, skip = false;
+    const follow = { x: 0, y: 0, a: 0 };     // smoothed pointer influence
     const t0 = performance.now();
     const scene = { pos: { x: 0, y: 0, a: 0 } };
 
@@ -960,21 +986,33 @@
       });
     };
 
+    function fitR(Sp) {
+      const probe = new Sp(1);
+      const bw = probe.box[2] - probe.box[0], bh = probe.box[3] - probe.box[1];
+      return Math.min((w - 40) / bw, (h - 70) / bh) * 0.86;
+    }
+
     function layout() {
       const narrow = w < 700;
-      R = narrow ? Math.min(w * 0.2, h * 0.13) : Math.min(w * 0.13, h * 0.18);
-      cx = narrow ? w * 0.6 : w * 0.7;
-      cy = h * 0.5;
+      if (mini) {
+        R = fitR(order[0]);
+        cx = w / 2; cy = h / 2 + 12;
+      } else {
+        R = narrow ? Math.min(w * 0.2, h * 0.13) : Math.min(w * 0.13, h * 0.18);
+        cx = narrow ? w * 0.6 : w * 0.7;
+        cy = h * 0.5;
+      }
       cur = new order[idx % order.length](R);
       next = null; particles = null; state = 'hold';
-      snow = Array.from({ length: Math.round((w * h) / 9000) }, () => ({ x: rand(0, w), y: rand(0, h), r: rand(0.3, 1.3), v: rand(2, 9), a: rand(0.1, 0.5) }));
+      const density = (mini ? 14000 : 9000) * (LOW ? 2 : 1);
+      snow = Array.from({ length: Math.round((w * h) / density) }, () => ({ x: rand(0, w), y: rand(0, h), r: rand(0.3, 1.3), v: rand(2, 9), a: rand(0.1, 0.5) }));
       tags = [];
     }
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
-      dpr = Math.min(2, window.devicePixelRatio || 1);
+      dpr = Math.min(LOW ? 1.25 : 2, window.devicePixelRatio || 1);
       w = rect.width; h = rect.height;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
@@ -988,11 +1026,12 @@
 
     function beginMorph(t) {
       next = new order[(idx + 1) % order.length](R);
-      const a = samplePoints(cur, t, PARTICLES), b = samplePoints(next, t, PARTICLES);
+      const a = samplePoints(cur, t, particleCount), b = samplePoints(next, t, particleCount);
       particles = a.map((p, i) => ({ a: p, b: b[i], spin: rand(-1.4, 1.4), jit: rand(0.3, 1.2) }));
       state = 'morph';
       morphStart = t;
       tags = [];
+      if (!mini && window.siteSound) window.siteSound.ping();
     }
 
     function drawParticles(p) {
@@ -1019,9 +1058,17 @@
       ctx.restore();
     }
 
+    // Pointer in canvas coordinates, or null when it is not over this canvas
+    function localPointer() {
+      if (!pointer.active || reduceMotion) return null;
+      const r = canvas.getBoundingClientRect();
+      const x = pointer.x - r.left, y = pointer.y - r.top;
+      return x >= 0 && y >= 0 && x <= r.width && y <= r.height ? { x, y } : null;
+    }
+
     function render(t, dt) {
       // timeline
-      if (!reduceMotion) {
+      if (!reduceMotion && cycles) {
         if (state === 'hold' && t - phaseStart >= HOLD) beginMorph(t);
         if (state === 'morph' && t - morphStart >= MORPH) {
           cur = next; next = null; particles = null;
@@ -1043,8 +1090,23 @@
         dot(ctx, s.x, s.y, s.r, `rgba(180,200,255,${s.a})`);
       }
 
+      // the specimen leans and drifts toward the pointer
+      const lp = localPointer();
+      const k = Math.min(1, dt * 2.2);
+      if (lp) {
+        follow.x = lerp(follow.x, Math.max(-0.5, Math.min(0.5, (lp.x - cx) / w)) * R * 0.5, k);
+        follow.y = lerp(follow.y, Math.max(-0.5, Math.min(0.5, (lp.y - cy) / h)) * R * 0.35, k);
+        follow.a = lerp(follow.a, Math.max(-1, Math.min(1, (lp.x - scene.pos.x) / (R * 4))) * 0.2, k);
+      } else {
+        follow.x = lerp(follow.x, 0, k); follow.y = lerp(follow.y, 0, k); follow.a = lerp(follow.a, 0, k);
+      }
+
       // gentle float
-      scene.pos = { x: cx + Math.sin(t * 0.31) * R * 0.15, y: cy + Math.sin(t * 0.47 + 1) * R * 0.12, a: Math.sin(t * 0.23) * 0.07 };
+      scene.pos = {
+        x: cx + Math.sin(t * 0.31) * R * 0.15 + follow.x,
+        y: cy + Math.sin(t * 0.47 + 1) * R * 0.12 + follow.y,
+        a: Math.sin(t * 0.23) * 0.07 + follow.a,
+      };
 
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -1073,7 +1135,6 @@
       if (state === 'morph') {
         const pct = Math.round(clamp01(p) * 100), bars = Math.round(clamp01(p) * 10);
         ctx.fillText(`RECLASSIFYING ${'▮'.repeat(bars)}${'▯'.repeat(10 - bars)} ${pct}%`, fx, fy - 6);
-        // scan sweep through the frame
         const sy = fy + fh * smooth(p);
         const sg = ctx.createLinearGradient(0, sy - 30, 0, sy);
         sg.addColorStop(0, 'rgba(111,243,255,0)');
@@ -1082,15 +1143,31 @@
         ctx.fillRect(fx, sy - 30, fw, 30);
         ctx.fillStyle = 'rgba(180,250,255,0.8)';
         ctx.fillRect(fx, sy, fw, 1);
-      } else {
-        ctx.fillText(`SPECIMEN ${n} // ${cur.taxon} — LOCK`, fx, fy - 6);
+      } else if (!mini) {
+        ctx.fillText(`SPECIMEN ${n} // ${cur.taxon} — LOCK`, Math.max(8, fx), Math.max(14, fy - 6));
       }
 
       // annotation tags (only while a specimen is locked)
-      if (state === 'hold') {
+      if (state === 'hold' && showTags) {
+        const pts = scene.anchorsWorld(t);
+        // pointer lock-on: the body part nearest the pointer gets a locked tag
+        let near = -1;
+        if (lp) {
+          let best = 52;
+          pts.forEach((pt, i) => { const dd = Math.hypot(pt.x - lp.x, pt.y - lp.y); if (dd < best) { best = dd; near = i; } });
+        }
+        for (const g of tags) g.locked = g.idx === near;
+        if (near >= 0 && !tags.some((g) => g.idx === near)) {
+          // clear unlocked tags whose labels would collide with the new lock
+          const np = pts[near];
+          tags = tags.filter((g) => { const q = pts[g.idx]; return !q || Math.abs(q.y - np.y) > 44 || Math.abs(q.x - np.x) > 220; });
+          if (tags.length >= 4) tags.shift();
+          tags.push(new Tag(scene, t, near, true));
+          if (window.siteSound) window.siteSound.blip();
+        }
         tags = tags.filter((g) => !g.dead(t));
-        if (tags.length < 3 && (reduceMotion || Math.random() < 0.05 || !tags.length)) {
-          const pts = scene.anchorsWorld(t);
+        const cap = mini ? 2 : 3;
+        if (tags.filter((g) => !g.locked).length < cap && (reduceMotion || Math.random() < 0.05 || !tags.length)) {
           const live = tags.map((g) => pts[g.idx]);
           const free = pts.map((pt, i) => ({ pt, i })).filter(({ pt, i }) =>
             !tags.some((g) => g.idx === i) && live.every((q) => Math.abs(q.y - pt.y) > 44 || Math.abs(q.x - pt.x) > 220));
@@ -1099,26 +1176,48 @@
         for (const g of tags) g.draw(ctx, t, w);
       }
 
+      // pointer crosshair inside the specimen frame
+      if (lp && lp.x > fx && lp.x < fx + fw && lp.y > fy && lp.y < fy + fh) {
+        ctx.strokeStyle = 'rgba(111,243,255,0.55)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(lp.x - 14, lp.y); ctx.lineTo(lp.x - 5, lp.y);
+        ctx.moveTo(lp.x + 5, lp.y); ctx.lineTo(lp.x + 14, lp.y);
+        ctx.moveTo(lp.x, lp.y - 14); ctx.lineTo(lp.x, lp.y - 5);
+        ctx.moveTo(lp.x, lp.y + 5); ctx.lineTo(lp.x, lp.y + 14);
+        ctx.stroke();
+        ctx.font = `13px ${HUD_FONT}`;
+        ctx.fillStyle = 'rgba(111,243,255,0.7)';
+        ctx.fillText(`${pad(lp.x)}:${pad(lp.y)}`, lp.x + 10, lp.y + 22);
+      }
+
       // corner readouts
       frame++;
       ctx.font = `14px ${HUD_FONT}`;
       ctx.fillStyle = 'rgba(180,195,225,0.55)';
       ctx.textAlign = 'right';
-      const secs = Math.floor(t);
-      ctx.fillText(`REC ● ${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}:${String(frame % 60).padStart(2, '0')}`, w - 16, h - 18);
-      ctx.fillText(`DEPTH ${(1180 + Math.sin(t * 0.1) * 40).toFixed(0)}M  ·  ${(3.1 + Math.sin(t * 0.07) * 0.2).toFixed(1)}°C`, w - 16, h - 34);
-      if (!reduceMotion) {
-        ctx.fillText(state === 'morph' ? 'SEQUENCING…' : `NEXT SCAN ${String(Math.ceil(HOLD - (t - phaseStart))).padStart(2, '0')}S`, w - 16, h - 50);
+      if (mini) {
+        ctx.fillText(`${cur.taxon} · LIVE`, w - 14, h - 14);
+      } else {
+        const secs = Math.floor(t);
+        const depth = window.siteDive ? window.siteDive.depth : 1180;
+        ctx.fillText(`REC ● ${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}:${String(frame % 60).padStart(2, '0')}`, w - 16, h - 18);
+        ctx.fillText(`DEPTH ${(depth + Math.sin(t * 0.1) * 6).toFixed(0)}M  ·  ${(3.1 - (depth - 1180) / 2800 + Math.sin(t * 0.07) * 0.2).toFixed(1)}°C`, w - 16, h - 34);
+        if (!reduceMotion && cycles) {
+          ctx.fillText(state === 'morph' ? 'SEQUENCING…' : `NEXT SCAN ${String(Math.ceil(HOLD - (t - phaseStart))).padStart(2, '0')}S`, w - 16, h - 50);
+        }
       }
       ctx.textAlign = 'left';
     }
 
     function loop(ts) {
       if (!running) return;
-      const dt = Math.min(0.05, (ts - last) / 1000);
+      requestAnimationFrame(loop);
+      // low-power devices draw at ~30fps
+      if (LOW && (skip = !skip)) return;
+      const dt = Math.min(0.066, (ts - last) / 1000);
       last = ts;
       render(now(), dt);
-      requestAnimationFrame(loop);
     }
 
     function setRunning(on) {
