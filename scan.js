@@ -88,6 +88,7 @@
       this.tent = Array.from({ length: 24 }, (_, i) => ({ u: -0.97 + (1.94 * i) / 23, len: rand(2.3, 3.4), off: rand(0, TAU), w: rand(0.5, 1) }));
       this.arms = [-0.22, -0.075, 0.075, 0.22].map((u) => ({ u, len: rand(1.7, 2.3), off: rand(0, TAU) }));
       this.speck = Array.from({ length: 80 }, () => ({ u: rand(-1, 1), v: rand(0.05, 0.95), a: rand(0.08, 0.3) }));
+      this.motes = Array.from({ length: 44 }, () => ({ u: rand(-1, 1), v: rand(0.1, 0.9), f: rand(0, TAU), s: rand(0.6, 1.5) }));
     }
 
     geo(t) {
@@ -98,7 +99,8 @@
     tentPt(tn, k, t, g) {
       const r = this.r;
       return {
-        x: tn.u * g.rx * 0.96 + tn.u * k * r * 0.3 + Math.sin(t * 1.7 + tn.off + k * 3.2) * k * r * 0.3 + Math.sin(t * 0.5 + tn.off) * k * k * r * 0.25,
+        x: tn.u * g.rx * 0.96 + tn.u * k * r * 0.3 + Math.sin(t * 1.7 + tn.off + k * 3.2) * k * r * 0.3 + Math.sin(t * 0.5 + tn.off) * k * k * r * 0.25
+          + Math.sin(k * 18 + t * 3 + tn.off) * k * k * r * 0.04, // fine coiling toward the tips
         y: g.y0 + r * 0.1 + k * tn.len * r * (1 - 0.06 * g.p),
       };
     }
@@ -138,6 +140,7 @@
         ctx.lineWidth = 0.6 + 0.5 * tn.w;
         ctx.stroke();
         for (let s = 2; s < 30; s += 3) dot(ctx, pts[s].x, pts[s].y, 0.9, `rgba(215,232,255,${0.5 * (1 - s / 30)})`);
+        dot(ctx, pts[0].x, pts[0].y, 1.6, 'rgba(200,225,255,0.65)'); // tentacle bulb
       }
 
       // oral arms with frilled, lace-like edges
@@ -156,7 +159,19 @@
         ctx.lineWidth = 0.8;
         ctx.strokeStyle = 'rgba(220,200,255,0.22)';
         ctx.stroke();
+        // bright midrib
+        ctx.beginPath();
+        pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = 'rgba(255,245,255,0.35)';
+        ctx.stroke();
       }
+
+      // velum: thin translucent shelf under the margin
+      ctx.beginPath();
+      ctx.ellipse(0, y0 + r * 0.06, rx * 0.9, r * 0.05, 0, 0, TAU);
+      ctx.fillStyle = 'rgba(170,180,255,0.08)';
+      ctx.fill();
 
       // manubrium
       ctx.beginPath();
@@ -220,6 +235,35 @@
         dot(ctx, s.u * rx * 0.92 * Math.sqrt(1 - s.v * s.v), y0 - s.v * ry * 0.92, 0.7, `rgba(230,240,255,${s.a})`);
       }
 
+      // hairline striations across the exumbrella
+      ctx.beginPath();
+      for (let i = 0; i < 30; i++) {
+        const u = -0.96 + (1.92 * i) / 29;
+        ctx.moveTo(0, y0 - ry * 0.97);
+        ctx.quadraticCurveTo(u * rx * 0.85, y0 - ry * 0.9, u * rx * 0.99, y0 - r * 0.01);
+      }
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = 'rgba(220,230,255,0.1)';
+      ctx.stroke();
+
+      // iridescent rim: hue travels around the bell edge
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < 48; i++) {
+        const a0 = Math.PI + (i / 48) * Math.PI, a1 = Math.PI + ((i + 1) / 48) * Math.PI;
+        const hue = (((200 + 90 * Math.sin(a0 * 4 + t * 1.2)) % 360) + 360) % 360;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a0) * rx, y0 + Math.sin(a0) * ry);
+        ctx.lineTo(Math.cos(a1) * rx, y0 + Math.sin(a1) * ry);
+        ctx.strokeStyle = `hsla(${hue},90%,75%,0.4)`;
+        ctx.stroke();
+      }
+
+      // drifting light motes inside the bell
+      for (const m of this.motes) {
+        const a = 0.15 + 0.6 * Math.max(0, Math.sin(t * 1.8 + m.f));
+        dot(ctx, m.u * rx * 0.7 * Math.sqrt(1 - m.v * m.v), y0 - m.v * ry * 0.85 + Math.sin(t * 0.7 + m.f) * r * 0.03, m.s, `rgba(200,240,255,${a})`);
+      }
+
       // rhopalia (sense organs) between lappets
       for (let i = 1; i < 8; i++) {
         const x = rx - (2 * rx * i * 2) / 16;
@@ -271,6 +315,15 @@
       halo(ctx, 0, -0.7 * r, r, 'rgba(200,245,255,0.1)');
       ctx.lineCap = 'round';
 
+      // buccal webbing between the arm bases
+      ctx.beginPath();
+      ctx.moveTo(-0.24 * r, 0.5 * r);
+      for (const a of this.arms) { const p = this.armPt(a, 0.2, t); ctx.lineTo(p.x, p.y); }
+      ctx.lineTo(0.24 * r, 0.5 * r);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(150,210,255,0.1)';
+      ctx.fill();
+
       // eight arms with paired sucker rows
       for (const a of this.arms) {
         const w = (k) => (1 - k) * r * 0.085 + 0.8;
@@ -306,8 +359,14 @@
       ctx.quadraticCurveTo(-fc.x, fc.y, f0.x, f0.y);
       ctx.fillStyle = 'rgba(110,190,255,0.2)';
       ctx.fill();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(190,240,255,0.45)';
+      // iridescent fin edge
+      const fe = ctx.createLinearGradient(-fc.x, 0, fc.x, 0);
+      const sh = t * 40;
+      fe.addColorStop(0, `hsla(${(190 + sh) % 360},100%,75%,0.6)`);
+      fe.addColorStop(0.5, `hsla(${(280 + sh) % 360},100%,80%,0.5)`);
+      fe.addColorStop(1, `hsla(${(160 + sh) % 360},100%,75%,0.6)`);
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = fe;
       ctx.stroke();
       ctx.beginPath();
       for (let j = 1; j < 8; j++) {
@@ -334,6 +393,37 @@
       ctx.shadowBlur = 0;
       ctx.strokeStyle = 'rgba(220,250,255,0.5)';
       ctx.stroke();
+
+      // fine reticulated mesh across the mantle skin
+      ctx.beginPath();
+      for (let u = -0.8; u <= 0.81; u += 0.2) {
+        for (let i = 1; i <= 24; i++) {
+          const v = i / 24;
+          i === 1 ? ctx.moveTo(u * this.hw(v, m), this.vy(v)) : ctx.lineTo(u * this.hw(v, m), this.vy(v));
+        }
+      }
+      for (let v = 0.08; v < 0.99; v += 0.055) {
+        const w = this.hw(v, m), y = this.vy(v);
+        ctx.moveTo(-w, y);
+        ctx.quadraticCurveTo(0, y + r * 0.05, w, y);
+      }
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = 'rgba(210,245,255,0.08)';
+      ctx.stroke();
+
+      // iridophore stripes shimmering down the dorsal side
+      for (const side of [-1, 1]) {
+        for (let j = 0; j < 30; j++) {
+          const v0 = 0.06 + j * 0.03, v1 = v0 + 0.03;
+          const hue = 170 + 60 * Math.sin(v0 * 7 - t * 2);
+          ctx.beginPath();
+          ctx.moveTo(side * this.hw(v0, m) * 0.28, this.vy(v0));
+          ctx.lineTo(side * this.hw(v1, m) * 0.28, this.vy(v1));
+          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = `hsla(${hue},100%,72%,0.28)`;
+          ctx.stroke();
+        }
+      }
 
       // gladius (internal pen)
       ctx.beginPath();
@@ -385,6 +475,14 @@
         ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(210,245,255,0.7)'; ctx.stroke();
         ctx.beginPath(); ctx.arc(ex, ey, 0.05 * r, 0, TAU);
         ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(120,220,255,0.6)'; ctx.stroke();
+        // iris striations
+        ctx.beginPath();
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * TAU;
+          ctx.moveTo(ex + Math.cos(a) * 0.052 * r, ey + Math.sin(a) * 0.052 * r);
+          ctx.lineTo(ex + Math.cos(a) * 0.08 * r, ey + Math.sin(a) * 0.08 * r);
+        }
+        ctx.lineWidth = 0.6; ctx.strokeStyle = 'rgba(170,240,255,0.45)'; ctx.stroke();
         dot(ctx, ex, ey, 2.2, 'rgba(255,255,255,0.95)');
         dot(ctx, ex - 0.02 * r, ey - 0.025 * r, 1, 'rgba(255,255,255,1)');
       }
@@ -413,6 +511,7 @@
       this.taxon = 'CTENOPHORA';
       this.box = [-1.75, -1.55, 1.75, 2.95];
       this.tent = [-1, 1].map((side) => ({ side, off: rand(0, TAU) }));
+      this.gut = Array.from({ length: 28 }, () => ({ u: rand(-1, 1), f: rand(0, 1), s: rand(0.6, 1.4) }));
     }
 
     geo(t) {
@@ -442,12 +541,16 @@
         for (let s = 0; s <= 40; s++) { const p = this.tentPt(tn, s / 40, t); s ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
         ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(190,220,255,0.32)'; ctx.stroke();
         ctx.beginPath();
+        const ends = [];
         for (let k = 0.12; k < 0.97; k += 0.035) {
           const p = this.tentPt(tn, k, t), len = r * 0.2 * (1 - k * 0.45), wob = Math.sin(t * 2.2 + k * 25 + tn.off);
+          const e = { x: p.x + tn.side * len * (0.5 + 0.3 * wob), y: p.y + len * 0.8 };
           ctx.moveTo(p.x, p.y);
-          ctx.quadraticCurveTo(p.x + tn.side * len * 0.6, p.y + len * 0.2, p.x + tn.side * len * (0.5 + 0.3 * wob), p.y + len * 0.8);
+          ctx.quadraticCurveTo(p.x + tn.side * len * 0.6, p.y + len * 0.2, e.x, e.y);
+          ends.push(e);
         }
         ctx.lineWidth = 0.7; ctx.strokeStyle = 'rgba(200,225,255,0.18)'; ctx.stroke();
+        for (const e of ends) dot(ctx, e.x, e.y, 0.8, 'rgba(220,240,255,0.45)'); // colloblast beads
       }
 
       // body
@@ -463,11 +566,33 @@
       ctx.shadowBlur = 0;
       ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(210,230,255,0.4)'; ctx.stroke();
 
+      // inner shell
+      ctx.beginPath();
+      ctx.ellipse(0, cy, rx * 0.86, ry * 0.9, 0, 0, TAU);
+      ctx.lineWidth = 0.6; ctx.strokeStyle = 'rgba(200,220,255,0.12)'; ctx.stroke();
+
       // pharynx
       ctx.beginPath();
       ctx.ellipse(0, cy + ry * 0.15, rx * 0.26, ry * 0.62, 0, 0, TAU);
       ctx.fillStyle = 'rgba(210,180,255,0.1)'; ctx.fill();
       ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(220,200,255,0.22)'; ctx.stroke();
+
+      // particles drifting up through the gut
+      for (const m of this.gut) {
+        const k = (t * 0.12 + m.f) % 1;
+        const y = cy + ry * 0.72 - k * ry * 1.15;
+        const x = m.u * rx * 0.2 * Math.sin(Math.PI * k) + Math.sin(t + m.f * 9) * rx * 0.03;
+        dot(ctx, x, y, m.s, `rgba(235,215,255,${0.55 * Math.sin(Math.PI * k)})`);
+      }
+
+      // canals radiating from the statocyst to each comb row
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const p = this.combPt(i, 0.12, t, g);
+        ctx.moveTo(0, cy - ry);
+        ctx.quadraticCurveTo(p.x * 0.4, cy - ry * 0.98, p.x, p.y);
+      }
+      ctx.lineWidth = 0.6; ctx.strokeStyle = 'rgba(200,225,255,0.18)'; ctx.stroke();
 
       // tentacle sheaths
       for (const side of [-1, 1]) {
@@ -539,6 +664,22 @@
         const x = rand(-0.75, 0.95), y = rand(-0.6, 0.6);
         if ((x - 0.1) ** 2 / 0.75 + y * y / 0.33 < 1) this.skin.push({ x, y, f: rand(0, TAU) });
       }
+      this.dermal = [];
+      while (this.dermal.length < 90) {
+        const x = rand(-0.8, 1.0), y = rand(-0.7, 0.65);
+        if ((x - 0.1) ** 2 / 0.8 + y * y / 0.36 < 1) this.dermal.push({ x, y });
+      }
+      this.bact = Array.from({ length: 26 }, () => ({ a: rand(0, TAU), s: rand(0.4, 1.4) * (Math.random() < 0.5 ? -1 : 1), d: rand(0, 1), f: rand(0, TAU) }));
+    }
+
+    rodPt(s, t) {
+      const r = this.r, e = this.esca(t), sway = Math.sin(t * 1.3 + this.ph);
+      const P = [{ x: -0.15 * r, y: -0.82 * r }, { x: -0.25 * r, y: -1.75 * r }, { x: -1.1 * r, y: (-1.95 + sway * 0.04) * r }, { x: e.x, y: e.y - 0.08 * r }];
+      const q = 1 - s;
+      return {
+        x: q * q * q * P[0].x + 3 * q * q * s * P[1].x + 3 * q * s * s * P[2].x + s * s * s * P[3].x,
+        y: q * q * q * P[0].y + 3 * q * q * s * P[1].y + 3 * q * s * s * P[2].y + s * s * s * P[3].y,
+      };
     }
 
     esca(t) { return { x: -1.38 * this.r, y: (-1.45 + Math.sin(t * 0.9) * 0.06) * this.r }; }
@@ -566,6 +707,8 @@
       ctx.beginPath();
       for (const p of rays) { ctx.moveTo(tb.x, tb.y); ctx.lineTo(p.x, p.y); }
       ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(170,220,255,0.38)'; ctx.stroke();
+      // segmented ray joints
+      for (const p of rays) for (const k of [0.33, 0.55, 0.75, 0.92]) dot(ctx, lerp(tb.x, p.x, k), lerp(tb.y, p.y, k), 0.8, 'rgba(200,235,255,0.4)');
 
       // body silhouette with rim light
       ctx.beginPath();
@@ -593,7 +736,17 @@
       ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(170,220,255,0.2)'; ctx.stroke();
 
       // needle teeth
-      const teeth = (from, to, n, dir, base, extra) => {
+      // dermal texture: fine papillae across the skin
+      for (const d of this.dermal) dot(ctx, d.x * r, d.y * r, 0.55, 'rgba(170,210,255,0.16)');
+      // faint wrinkles behind the jaw
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        ctx.moveTo((-0.5 + i * 0.07) * r, (0.15 + i * 0.03) * r);
+        ctx.quadraticCurveTo((-0.35 + i * 0.07) * r, (0.32 + i * 0.03) * r, (-0.2 + i * 0.06) * r, (0.48 + i * 0.02) * r);
+      }
+      ctx.lineWidth = 0.6; ctx.strokeStyle = 'rgba(170,220,255,0.14)'; ctx.stroke();
+
+      const teeth = (from, to, n, dir, base, extra, alpha = 0.75) => {
         for (let i = 0; i <= n; i++) {
           const f = i / n, bx = lerp(from.x, to.x, f) * r, by = lerp(from.y, to.y, f) * r;
           const len = r * (base + extra * (1 - f) * (i % 2 ? 0.6 : 1));
@@ -601,10 +754,13 @@
           ctx.moveTo(bx - 0.015 * r, by);
           ctx.quadraticCurveTo(bx + dir.x * len * 0.5, by + dir.y * len * 0.6, bx + dir.x * len, by + dir.y * len);
           ctx.lineTo(bx + 0.015 * r, by);
-          ctx.fillStyle = 'rgba(240,250,255,0.75)';
+          ctx.fillStyle = `rgba(240,250,255,${alpha})`;
           ctx.fill();
         }
       };
+      // inner row of smaller, depressible teeth first, then the main fangs
+      teeth({ x: -0.94, y: -0.24 }, { x: -0.6, y: 0.0 }, 12, { x: -0.3, y: 0.95 }, 0.035, 0.05, 0.4);
+      teeth({ x: -1.04, y: 0.2 + jaw }, { x: -0.6, y: 0.03 }, 11, { x: -0.25, y: -0.97 }, 0.04, 0.07, 0.4);
       teeth({ x: -1.0, y: -0.3 }, { x: -0.55, y: 0.02 }, 9, { x: -0.24, y: 0.97 }, 0.07, 0.12);
       teeth({ x: -1.12, y: 0.25 + jaw }, { x: -0.55, y: 0.02 }, 8, { x: -0.2, y: -0.98 }, 0.08, 0.2);
 
@@ -652,10 +808,23 @@
         ctx.quadraticCurveTo(e.x + i * 0.05 * r, e.y + 0.14 * r, e.x + i * 0.08 * r + Math.sin(t * 2 + i) * 0.02 * r, e.y + 0.22 * r);
       }
       ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(170,255,235,0.5)'; ctx.stroke();
+      // rod segments
+      for (let s = 0.12; s < 0.95; s += 0.12) { const p = this.rodPt(s, t); dot(ctx, p.x, p.y, 1.3, 'rgba(210,240,255,0.55)'); }
+
       halo(ctx, e.x, e.y, r * 0.45, `rgba(200,255,245,${0.55 * glow})`);
       ctx.beginPath(); ctx.ellipse(e.x, e.y, 0.065 * r, 0.075 * r, 0, 0, TAU);
       ctx.fillStyle = 'rgba(220,255,250,0.8)'; ctx.fill();
+      // lens ring and window on the esca
+      ctx.beginPath(); ctx.arc(e.x, e.y, 0.1 * r, 0, TAU);
+      ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(170,255,235,0.5)'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(e.x, e.y, 0.1 * r, -2.4, -0.7);
+      ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.stroke();
       dot(ctx, e.x, e.y, 2.5, 'rgba(255,255,255,1)');
+      // symbiotic bacteria swirling around the lure
+      for (const b of this.bact) {
+        const a = b.a + t * b.s, rad = r * (0.13 + 0.12 * b.d);
+        dot(ctx, e.x + Math.cos(a) * rad, e.y + Math.sin(a) * rad * 0.8, 1, `rgba(160,255,230,${0.3 + 0.5 * Math.max(0, Math.sin(t * 3 + b.f))})`);
+      }
     }
 
     anchors(t) {

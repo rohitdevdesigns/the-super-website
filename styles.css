@@ -30,7 +30,9 @@ main { max-width: 1320px; margin: 0 auto; padding: 0 5vw; position: relative; }
 
 /* ---------- nav ---------- */
 .nav { display: flex; justify-content: space-between; align-items: center; padding: 28px 0; font-weight: 700; position: relative; z-index: 2; }
-.nav-links { display: flex; gap: 24px; }
+.nav-links { display: flex; gap: 24px; align-items: center; }
+/* the ↗ glyph comes from a fallback font with taller metrics; keep it from shifting the line */
+.nav-link span { line-height: 0; display: inline-block; transform: translateY(-.05em); }
 .brand { color: inherit; font-family: var(--hud); font-size: 1.7rem; letter-spacing: .02em; text-decoration: none; text-transform: uppercase; text-shadow: 0 0 12px rgba(188,215,255,.6); }
 .brand span { color: var(--cyan); }
 .nav-link { color: var(--dim); font-family: var(--hud); font-size: 1.25rem; letter-spacing: .04em; text-decoration: none; text-transform: uppercase; transition: color .2s, text-shadow .2s; }
@@ -153,12 +155,36 @@ em {
 /* ---------- holographic damascus cards (holo.js) ---------- */
 .holo-card {
   --mx: 50%; --my: 45%; --px: .5; --py: .5; --hover: 0; --rx: 0deg; --ry: 0deg;
+  --radius: 22px;
+  --pattern: linear-gradient(transparent, transparent); /* until holo.js paints the real mask */
   isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid rgba(190,205,255,.14);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 24px 50px -30px rgba(0,0,0,.9);
   transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
   transition: transform .6s cubic-bezier(.2,.8,.2,1), box-shadow .4s;
 }
-.holo-card.is-active { transition: transform .12s linear, box-shadow .4s; box-shadow: 0 30px 60px -20px rgba(111,243,255,.18); }
-.holo { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.holo-card.is-active {
+  transition: transform .12s linear, box-shadow .4s;
+  box-shadow: 0 1px 0 rgba(255,255,255,.1) inset, 0 34px 70px -24px rgba(111,243,255,.22);
+}
+/* inner hairline frame, like a printed trading card */
+.holo-card::before, .holo-card:hover::before {
+  inset: 10px; border-radius: calc(var(--radius) - 9px);
+  border: 1px solid rgba(200,215,255,.1);
+  background: none; filter: none; z-index: 1;
+}
+/* iridescent edge that wakes up under the pointer */
+.holo-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; z-index: 2;
+  background: conic-gradient(from calc(var(--px) * 360deg) at var(--mx) var(--my),
+    #ff5ec4, #ffb36e, #f6ff7d, #7dffb0, #5ee0ff, #8c7bff, #ff5ec4);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: calc(var(--hover) * .7); transition: opacity .45s;
+}
+.holo { position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit; }
 .holo > div {
   position: absolute; inset: 0;
   -webkit-mask-image: var(--pattern); mask-image: var(--pattern);
@@ -182,13 +208,34 @@ em {
 /* soft specular glare (not masked by the pattern) */
 .holo > .holo-glare {
   -webkit-mask-image: none; mask-image: none;
-  background: radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,.12), transparent 42%);
+  background:
+    radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,.12), transparent 42%),
+    linear-gradient(115deg, transparent calc(var(--px) * 100% - 22%), rgba(255,255,255,.07) calc(var(--px) * 100%), transparent calc(var(--px) * 100% + 22%));
   mix-blend-mode: screen; opacity: var(--hover); transition: opacity .45s;
 }
-.card.holo-card { justify-content: flex-start; }
+.card.holo-card {
+  aspect-ratio: 3 / 4; padding: 26px 28px;
+  justify-content: flex-start;
+  background: radial-gradient(circle at 50% 42%, var(--tint) 0%, transparent 62%), linear-gradient(170deg, #0a0d18, #04060b);
+}
+.card.holo-card > p { padding-left: 2px; }
 .card.holo-card h3 { margin-top: auto; }
-.card.holo-card > span { position: absolute; top: 22px; right: 25px; font-size: 1.5rem; }
-.note.holo-card { overflow: hidden; }
+.card.holo-card > span { position: absolute; top: 24px; right: 28px; font-size: 1.4rem; }
+.card-meta {
+  display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px;
+  border-top: 1px solid rgba(200,215,255,.1);
+  color: var(--dim); font-family: var(--hud); font-size: .95rem; letter-spacing: .08em; text-transform: uppercase;
+}
+.card-meta span { align-self: auto; color: inherit; font-size: inherit; text-shadow: none; }
+.note.holo-card { --radius: 26px; }
+@media (max-width: 700px) { .card.holo-card { aspect-ratio: 4 / 5; } }
+.story-cta { border-radius: 26px; overflow: hidden; }
+/* rounded panel gets a rounded inner hairline instead of square corner brackets */
+.story-cta::before {
+  inset: 10px; border-radius: 17px;
+  border: 1px solid rgba(200,215,255,.1);
+  background: none; filter: none;
+}
 @media (prefers-reduced-motion: reduce) { .holo-card { transform: none; } }
 
 footer { border-top: 1px solid var(--line); color: var(--dim); margin: 0 auto; max-width: calc(1320px - 10vw); padding: 24px 0 35px; width: 90vw; }
